@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
+	"runtime"
 )
 
 func LoadConfig() error {
@@ -26,7 +27,9 @@ var cfg *Config
 
 type Config struct {
 	APIPort     uint16 `mapstructure:"API_PORT"`
-	DatabaseDSN string `mapstructure:"DATABASE_URL"`
+	DatabaseDSN string `mapstructure:"DB_DSN"`
+	WorkerCount int    `mapstructure:"WORKER_COUNT"`
+	BatchSize   int    `mapstructure:"BATCH_SIZE"`
 }
 
 func GetAPIPort() uint16 {
@@ -35,4 +38,20 @@ func GetAPIPort() uint16 {
 
 func GetDatabaseDSN() string {
 	return cfg.DatabaseDSN
+}
+
+func GetWorkerCount() int {
+	if cfg.WorkerCount == 0 {
+		return runtime.NumCPU()
+	}
+
+	return cfg.WorkerCount
+}
+
+func GetBatchSize() int {
+	if cfg.BatchSize == 0 {
+		return 50000
+	}
+
+	return cfg.BatchSize
 }

@@ -3,21 +3,29 @@ package entity
 import "time"
 
 type Trade struct {
-	ID        uint
+	ID        int32
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	Ticker    string
-	TradeTime time.Time
-	TradeDate time.Time
+	Hour      string
+	Date      time.Time
 	Price     float64
 	Quantity  int
 }
 
-func NewTrade(tradeTime, tradeDate time.Time, price float64, quantity int) *Trade {
+func NewTrade(ticker, time string, date time.Time, price float64, quantity int) *Trade {
 	return &Trade{
-		TradeTime: tradeTime,
-		TradeDate: tradeDate,
-		Price:     price,
-		Quantity:  quantity,
+		Ticker:   ticker,
+		Hour:     time,
+		Date:     date,
+		Price:    price,
+		Quantity: quantity,
 	}
+}
+
+type TradeInfo struct {
+	Ticker   string
+	Price    float64
+	Date     time.Time
+	Quantity int
 }

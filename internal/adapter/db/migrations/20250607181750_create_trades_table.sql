@@ -6,7 +6,7 @@ CREATE TABLE trades
     hour       TEXT           NOT NULL,
     date       DATE           NOT NULL,
     ticker     TEXT           NOT NULL,
-    price      DECIMAL(18, 2) NOT NULL,
+    price      DECIMAL(18, 3) NOT NULL,
     quantity   INTEGER        NOT NULL,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()

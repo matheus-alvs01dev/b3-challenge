@@ -1,20 +1,61 @@
 package db
 
 import (
+	"b3challenge/internal/adapter/db/sqlc"
 	"b3challenge/internal/domain/entity"
-	"database/sql"
+	"context"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/pkg/errors"
+	"time"
 )
 
 type TradeRepository struct {
-	db *sql.DB
+	db      *pgxpool.Pool
+	querier sqlc.Querier
 }
 
-func NewTradeRepository(db *sql.DB) *TradeRepository {
+func NewTradeRepository(db *pgxpool.Pool) *TradeRepository {
 	return &TradeRepository{
-		db: db,
+		db:      db,
+		querier: sqlc.New(db),
 	}
 }
 
-func (r *TradeRepository) GetTrades() ([]entity.Trade, error) {
-	panic("implement me")
+func (r *TradeRepository) CreateTrades(ctx context.Context, trades []entity.Trade) (int64, error) {
+	params, err := sqlc.EntityToCreateTradesParams(trades)
+	if err != nil {
+		return 0, errors.Wrap(err, "translate")
+	}
+
+	affected, err := r.querier.CreateTrades(ctx, params)
+	if err != nil {
+		return 0, errors.Wrap(err, "create")
+	}
+
+	return affected, nil
+}
+
+func (r *TradeRepository) ListTradeInfoByTickerAndDate(
+	ctx context.Context,
+	ticker string,
+	date *time.Time,
+) ([]entity.TradeInfo, error) {
+	params := sqlc.NewListTradeInfoByTickerAndDateParams(ticker, date)
+
+	trades, err := r.querier.ListTradeInfoByTickerAndDate(ctx, params)
+	if err != nil {
+		return nil, errors.Wrap(err, "list")
+	}
+
+	var result []entity.TradeInfo
+	for _, trade := range trades {
+		info, err := trade.ToTradeInfo(ticker)
+		if err != nil {
+			return nil, errors.Wrap(err, "translate")
+		}
+
+		result = append(result, *info)
+	}
+
+	return result, nil
 }

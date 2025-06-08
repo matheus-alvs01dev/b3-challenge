@@ -1,0 +1,12 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    schema: "/internal/adapter/db//migrations/*.sql"
+    queries: "/internal/adapter/db/sqlc/queries/*.sql"
+    gen:
+      go:
+        out: "/internal/adapter/db/sqlc"
+        package: "sqlc"
+        sql_package: "pgx/v5"
+        emit_prepared_queries: true
+        emit_interface: true
