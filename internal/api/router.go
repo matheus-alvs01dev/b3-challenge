@@ -4,6 +4,7 @@ import (
 	"b3challenge/internal/api/ctrl"
 	"fmt"
 	"github.com/labstack/echo/v4"
+	echomiddleware "github.com/labstack/echo/v4/middleware"
 	"net/http"
 	"time"
 )
@@ -15,6 +16,7 @@ type Server struct {
 func NewServer() *Server {
 	router := echo.New()
 	router.HideBanner = true
+	router.Use(echomiddleware.LoggerWithConfig(echomiddleware.LoggerConfig{}))
 
 	return &Server{
 		router: router,
@@ -35,5 +37,5 @@ func (s *Server) Start(port uint16) {
 }
 
 func (s *Server) ConfigureRoutes(tradeCtrl *ctrl.TradesCtrl) {
-	s.router.GET("/trades", tradeCtrl.SearchTrades)
+	s.router.GET("/ticker-metrics", tradeCtrl.ComputeTickerMetrics)
 }

@@ -1,6 +1,9 @@
 package entity
 
-import "time"
+import (
+	"github.com/shopspring/decimal"
+	"time"
+)
 
 type Trade struct {
 	ID        int32
@@ -9,11 +12,11 @@ type Trade struct {
 	Ticker    string
 	Hour      string
 	Date      time.Time
-	Price     float64
+	Price     decimal.Decimal
 	Quantity  int
 }
 
-func NewTrade(ticker, time string, date time.Time, price float64, quantity int) *Trade {
+func NewTrade(ticker, time string, date time.Time, price decimal.Decimal, quantity int) *Trade {
 	return &Trade{
 		Ticker:   ticker,
 		Hour:     time,
@@ -25,7 +28,7 @@ func NewTrade(ticker, time string, date time.Time, price float64, quantity int) 
 
 type TradeInfo struct {
 	Ticker   string
-	Price    float64
+	Price    decimal.Decimal
 	Date     time.Time
 	Quantity int
 }

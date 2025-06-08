@@ -9,10 +9,15 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/pkg/errors v0.9.1
 	github.com/pressly/goose/v3 v3.24.3
+	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/viper v1.20.1
+	github.com/stretchr/testify v1.10.0
+	go.uber.org/mock v0.5.2
 )
 
 require (
+	github.com/AlekSi/pointer v1.2.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -22,6 +27,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sagikazarmark/locafero v0.9.0 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect

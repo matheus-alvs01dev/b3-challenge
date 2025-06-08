@@ -22,10 +22,7 @@ func NewTradeRepository(db *pgxpool.Pool) *TradeRepository {
 }
 
 func (r *TradeRepository) CreateTrades(ctx context.Context, trades []entity.Trade) (int64, error) {
-	params, err := sqlc.EntityToCreateTradesParams(trades)
-	if err != nil {
-		return 0, errors.Wrap(err, "translate")
-	}
+	params := sqlc.NewToCreateTradesParams(trades)
 
 	affected, err := r.querier.CreateTrades(ctx, params)
 	if err != nil {
@@ -49,12 +46,7 @@ func (r *TradeRepository) ListTradeInfoByTickerAndDate(
 
 	var result []entity.TradeInfo
 	for _, trade := range trades {
-		info, err := trade.ToTradeInfo(ticker)
-		if err != nil {
-			return nil, errors.Wrap(err, "translate")
-		}
-
-		result = append(result, *info)
+		result = append(result, trade.ToTradeInfo(ticker))
 	}
 
 	return result, nil

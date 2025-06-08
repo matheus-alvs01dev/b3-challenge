@@ -18,11 +18,11 @@ func main() {
 		log.Fatalf("Error initializing database client: %v", err)
 	}
 
-	diContainer := di.NewContainer(db.DB)
+	diContainer := di.NewContainer(db.DB())
 
 	server := api.NewServer()
-	server.Start(config.GetAPIPort())
 	server.ConfigureRoutes(
 		diContainer.NewTradesHandler(),
 	)
+	server.Start(config.GetAPIPort())
 }

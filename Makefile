@@ -6,3 +6,6 @@ db-populate:
 
 migration-create:
 	@goose -dir internal/adapter/db/migrations/ create $(name) sql
+
+test:
+	@go test -v ./... --cover
