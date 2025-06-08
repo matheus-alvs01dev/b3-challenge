@@ -3,3 +3,6 @@ server:
 
 db-populate:
 	@go run cmd/dbpopulate/main.go
+
+migration-create:
+	@goose -dir internal/adapter/db/migrations/ create $(name) sql
