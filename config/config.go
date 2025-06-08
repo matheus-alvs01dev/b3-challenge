@@ -26,10 +26,11 @@ func LoadConfig() error {
 var cfg *Config
 
 type Config struct {
-	APIPort     uint16 `mapstructure:"API_PORT"`
-	DatabaseDSN string `mapstructure:"DB_DSN"`
-	WorkerCount int    `mapstructure:"WORKER_COUNT"`
-	BatchSize   int    `mapstructure:"BATCH_SIZE"`
+	APIPort            uint16 `mapstructure:"API_PORT"`
+	DatabaseDSN        string `mapstructure:"DB_DSN"`
+	ParserWorkersCount int    `mapstructure:"PARSER_WORKER_COUNT"`
+	DBWorkersCount     int    `mapstructure:"DB_WORKER_COUNT"`
+	BatchSize          int    `mapstructure:"BATCH_SIZE"`
 }
 
 func GetAPIPort() uint16 {
@@ -40,12 +41,12 @@ func GetDatabaseDSN() string {
 	return cfg.DatabaseDSN
 }
 
-func GetWorkerCount() int {
-	if cfg.WorkerCount == 0 {
+func GetParserWorkersCount() int {
+	if cfg.ParserWorkersCount == 0 {
 		return runtime.NumCPU()
 	}
 
-	return cfg.WorkerCount
+	return cfg.ParserWorkersCount
 }
 
 func GetBatchSize() int {
@@ -54,4 +55,12 @@ func GetBatchSize() int {
 	}
 
 	return cfg.BatchSize
+}
+
+func GetDBWorkersCount() int {
+	if cfg.DBWorkersCount == 0 {
+		return runtime.NumCPU()
+	}
+
+	return cfg.DBWorkersCount
 }

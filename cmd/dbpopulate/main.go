@@ -14,7 +14,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -22,100 +21,112 @@ import (
 )
 
 func main() {
-	err := config.LoadConfig()
-	if err != nil {
-		log.Fatalf("Error loading env configs: %v", err)
-	}
-
-	workerCount := config.GetWorkerCount()
-	batchSize := config.GetBatchSize()
-
-	ctx, cancel := context.WithCancel(context.Background())
+	diContainer, ctx, cancel := setupComponents()
 	defer cancel()
+	defer diContainer.DB().Close()
 
-	dbClient, err := db.NewClient(config.GetDatabaseDSN())
-	if err != nil {
-		log.Fatalf("Error initializing database client: %v", err)
-	}
+	parserWorkers := config.GetParserWorkersCount()
+	batchSize := config.GetBatchSize()
+	dbWorkers := config.GetDBWorkersCount()
 
-	diContainer := di.NewContainer(dbClient.DB())
-	uc := diContainer.GetTradesUC()
+	tradesCh := make(chan entity.Trade, parserWorkers)
+	jobCh := make(chan string)
+	dbCh := make(chan []entity.Trade, dbWorkers)
 
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-sigCh
-		log.Info("Received shutdown signal, cancelling context...")
-		cancel()
-	}()
-
-	filesList, err := findTXTFiles("b3Data")
+	start := time.Now()
+	files, err := findTXTFiles("b3Data")
 	if err != nil {
 		log.Fatalf("Error finding TXT files: %v", err)
 	}
 
-	tradesCh := make(chan entity.Trade, workerCount)
-	jobCh := make(chan string)
+	var dbWg sync.WaitGroup
+	startDBWorkers(ctx, dbCh, diContainer.GetTradesUC(), dbWorkers, &dbWg)
 
-	var wg sync.WaitGroup
-	for i := 0; i < workerCount; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for file := range jobCh {
-				if err := parseFileToTrades(file, tradesCh); err != nil {
-					log.Error("Error parsing file %s: %v", file, err)
-					continue
-				}
-			}
-		}()
-	}
+	var parserWg sync.WaitGroup
+	startParserWorkers(ctx, parserWorkers, jobCh, tradesCh, &parserWg)
 
 	go func() {
-		for _, p := range filesList {
-			jobCh <- p
+		for _, f := range files {
+			jobCh <- f
 		}
 		close(jobCh)
-	}()
 
-	log.Info("Waiting for workers to finish...")
+		log.Info("All jobs dispatched. Waiting for parsers to finish...")
+		parserWg.Wait()
 
-	go func() {
-		wg.Wait()
+		log.Info("All parsing workers finished. Closing trades channel.")
 		close(tradesCh)
 	}()
 
+	processAndBatchTrades(ctx, tradesCh, dbCh, batchSize)
+
+	log.Info("Main process finished, waiting for DB workers to commit last batches...")
+	dbWg.Wait()
+
+	duration := time.Since(start)
+	log.Infof("Application finished. Total processing time: %s", duration)
+}
+
+func processAndBatchTrades(ctx context.Context, tradesIn <-chan entity.Trade, dbOut chan<- []entity.Trade, batchSize int) {
 	batch := make([]entity.Trade, 0, batchSize)
+	defer close(dbOut)
+
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
+			log.Info("Context cancelled, flushing final batch and stopping.")
+			if len(batch) > 0 {
+				dbOut <- batch
+			}
 			return
-		case tr, ok := <-tradesCh:
+
+		case tr, ok := <-tradesIn:
 			if !ok {
+				log.Info("Trades channel closed, flushing final batch.")
 				if len(batch) > 0 {
-					handleBatch(ctx, batch, uc)
+					dbOut <- batch
 				}
 				return
 			}
 			batch = append(batch, tr)
+			if len(batch) >= batchSize {
+				log.Infof("Batch size reached, sending %d trades", len(batch))
+				dbOut <- batch
+				batch = make([]entity.Trade, 0, batchSize)
+			}
 
-			if len(batch) == batchSize {
-				cur := batch
-				go handleBatch(ctx, cur, uc)
+		case <-ticker.C:
+			if len(batch) > 0 {
+				log.Infof("Ticker triggered, sending incomplete batch of %d trades", len(batch))
+				dbOut <- batch
 				batch = make([]entity.Trade, 0, batchSize)
 			}
 		}
 	}
 }
 
-func handleBatch(ctx context.Context, trades []entity.Trade, uc *usecase.TradesUC) error {
-	count, err := uc.CreateTrades(ctx, trades)
-	if err != nil {
-		log.Errorf("Error inserting batch of trades: %v", err)
-		return err
+func startParserWorkers(ctx context.Context, numWorkers int, jobCh <-chan string, tradesCh chan<- entity.Trade, wg *sync.WaitGroup) {
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for file := range jobCh {
+				select {
+				case <-ctx.Done():
+					log.Infof("Parser worker shutting down due to context cancellation.")
+					return
+				default:
+					if err := parseFileToTrades(ctx, file, tradesCh); err != nil {
+						log.Errorf("Error parsing file %s: %v", file, err)
+						continue
+					}
+				}
+			}
+		}()
 	}
-	log.Infof("Inserted batch of %d trades", count)
-	return nil
 }
 
 func findTXTFiles(pathDir string) ([]string, error) {
@@ -134,7 +145,7 @@ func findTXTFiles(pathDir string) ([]string, error) {
 	return list, nil
 }
 
-func parseFileToTrades(filePath string, out chan<- entity.Trade) error {
+func parseFileToTrades(ctx context.Context, filePath string, out chan<- entity.Trade) error {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return errors.Wrap(err, "cannot open file")
@@ -149,53 +160,78 @@ func parseFileToTrades(filePath string, out chan<- entity.Trade) error {
 	}
 
 	for {
-		rec, err := reader.Read()
-		if err == io.EOF {
-			break
+		select {
+		case <-ctx.Done():
+			log.Info("Context cancelled, stopping file parsing")
+			return ctx.Err()
+
+		default:
+			rec, err := reader.Read()
+			if err == io.EOF {
+				return nil
+			}
+			if err != nil {
+				log.Error("CSV read error: ", err)
+				continue
+			}
+			trade, err := parseTradeToEntity(rec)
+			if err != nil {
+				log.Error("parsing trade: ", err)
+				continue
+			}
+			out <- *trade
 		}
-		if err != nil {
-			log.Error("CSV read error: ", err)
-			continue
-		}
-		trade, err := parseTradeToEntity(rec)
-		if err != nil {
-			log.Error("parsing trade: ", err)
-			continue
-		}
-		out <- *trade
 	}
-	return nil
 }
 
-func parseTradeToEntity(r []string) (*entity.Trade, error) {
-	if len(r) < 10 {
-		return nil, errors.New("invalid record length")
-	}
-	// fields
-	ticker := r[1]
-	rawPrice := strings.ReplaceAll(r[3], ",", ".")
-	rawQty := r[4]
-	rawHour := r[5]
-	rawDate := r[8]
-
-	price, err := strconv.ParseFloat(rawPrice, 64)
+func setupComponents() (*di.Container, context.Context, context.CancelFunc) {
+	err := config.LoadConfig()
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing price")
-	}
-	qty, err := strconv.Atoi(rawQty)
-	if err != nil {
-		return nil, errors.Wrap(err, "parsing quantity")
-	}
-	// parse time HHMMSSXXX => HHMMSS
-	hourPart := rawHour
-	if len(rawHour) >= 6 {
-		hourPart = rawHour[:6]
+		log.Fatalf("Error loading env configs: %v", err)
 	}
 
-	date, err := time.Parse(time.DateOnly, rawDate)
+	ctx, cancel := context.WithCancel(context.Background())
+	dbClient, err := db.NewClient(config.GetDatabaseDSN())
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing date")
+		log.Fatalf("Error initializing database client: %v", err)
 	}
 
-	return entity.NewTrade(ticker, hourPart, date, price, qty), nil
+	diContainer := di.NewContainer(dbClient.DB())
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		log.Info("Received shutdown signal, cancelling context...")
+		cancel()
+	}()
+
+	return diContainer, ctx, cancel
+}
+
+func startDBWorkers(ctx context.Context, dbCh chan []entity.Trade, uc *usecase.TradesUC, workerCount int, wg *sync.WaitGroup) {
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for batch := range dbCh {
+				select {
+				case <-ctx.Done():
+					log.Infof("DB worker %d shutting down due to context cancellation.", id)
+					return
+
+				default:
+					if len(batch) == 0 {
+						continue
+					}
+					count, err := uc.CreateTrades(ctx, batch)
+					if err != nil {
+						log.Errorf("DB worker %d error: %v", id, err)
+						continue
+					}
+					log.Infof("DB worker %d wrote %d trades", id, count)
+				}
+			}
+		}(i)
+	}
 }

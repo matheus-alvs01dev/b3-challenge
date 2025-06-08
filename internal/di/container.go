@@ -31,3 +31,7 @@ func (c *Container) NewTradesHandler() *ctrl.TradesCtrl {
 func (c *Container) GetTradesUC() *usecase.TradesUC {
 	return c.tradesUC
 }
+
+func (c *Container) DB() *pgxpool.Pool {
+	return c.database
+}
