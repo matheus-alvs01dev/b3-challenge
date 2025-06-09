@@ -5,17 +5,9 @@ import (
 	"context"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
-	"os"
 	"testing"
 	"time"
 )
-
-func readFileTest(t *testing.T, file string) []byte {
-	b, err := os.ReadFile(file)
-	assert.NoError(t, err)
-
-	return b
-}
 
 func TestFindTXTFiles(t *testing.T) {
 	input := "testdata"
