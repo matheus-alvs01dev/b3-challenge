@@ -9,4 +9,4 @@ SELECT
     quantity
 FROM trades
 WHERE ticker = @ticker
-  AND (@trade_date::date IS NULL OR date = @trade_date::date);
+  AND (@trade_date::date IS NULL OR date >= @trade_date::date);

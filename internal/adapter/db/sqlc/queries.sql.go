@@ -26,7 +26,7 @@ SELECT
     quantity
 FROM trades
 WHERE ticker = $1
-  AND ($2::date IS NULL OR date = $2::date)
+  AND ($2::date IS NULL OR date >= $2::date)
 `
 
 type ListTradeInfoByTickerAndDateParams struct {
