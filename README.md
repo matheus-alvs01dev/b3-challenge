@@ -2,13 +2,13 @@
 
 O projeto consiste em 2 partes principais:
 
-1. **Ingestão de Dados**:
+1. **Ingestão de Dados em Massa**:
     - Lê arquivos CSV/TXT com dados de trades da B3.
     - Processa e insere os dados em lote no banco de dados PostgreSQL usando pq.CopyFrom para alta performance.
 
 
 2. **API REST de Métricas**:
-    - Existe 1 endpoint `/ticker-metrics` que retorna um payload com as métricas de trades por ticker.
+    - Existe 1 endpoint `GET /ticker-metrics` que retorna um payload com as métricas de trades por ticker.
    ```json
    {
 	    "ticker": "TF583R",
@@ -36,7 +36,7 @@ O projeto consiste em 2 partes principais:
 ## 📦 Pré-requisitos
 -	Go 1.24 instalado
 -	Docker e Docker Compose (para subri o banco de dados)
--	Build Essentials (Linux) ou Xcode Command Line Tools (macOS)
+-	Build Essentials (Linux) ou Xcode Command Line Tools (macOS) (para executar comandos de make)
 
 ⸻
 
