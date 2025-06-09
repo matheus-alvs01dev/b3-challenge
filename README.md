@@ -82,7 +82,7 @@ docker-compose up -d
 - as tabelas csv podem ser encontradas na pasta `./b3Data`
 - para popular o banco, execute:
 ```bash
-make populate-db
+make db-populate
 ```
 ### 4. Para iniciar o servidor
 ```bash
