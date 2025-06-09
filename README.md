@@ -16,7 +16,6 @@ O projeto consiste em 2 partes principais:
 	    "max_daily_volume": 20000
    }
     ```
-    
      - As métricas são calculadas a partir dos dados já persistidos no banco de dados.
 
 ⸻
@@ -42,6 +41,32 @@ O projeto consiste em 2 partes principais:
 ⸻
 
 ## ⚙️ Como configurar e rodar o projeto
+### 0. Baixar planilhas da B3
+#### 0.1. Baixar arquivos CSV da B3
+Como o github não permite o upload de arquivos grandes, você deve baixar os arquivos CSV da B3 manualmente.
+você pode baixa-los pelo meu [drive](https://drive.google.com/drive/folders/1pRfHjal3AL5Q9kRYW-DNeYVLoAyeumF1?usp=sharing), ou baixa-los diretamente do site da B3.
+#### 0.1. Descompactar os arquivos
+Descompacte os arquivos baixados da B3 e coloque-os na pasta `./b3Data`.
+
+sua pasta deverá estar exatamente assim:
+```
+b3challenge/
+├── b3Data/
+│   ├── 02-06-2025_NEGOCIOSAVISTA.txt
+│   ├── 03-06-2025_NEGOCIOSAVISTA.txt
+│   ├── 04-06-2025_NEGOCIOSAVISTA.txt
+│   ├── 27-05-2025_NEGOCIOSAVISTA.txt
+│   ├── 28-05-2025_NEGOCIOSAVISTA.txt
+│   ├── 29-05-2025_NEGOCIOSAVISTA.txt
+│   ├── 30-05-2025_NEGOCIOSAVISTA.txt
+│   └── README.md
+├── cmd/
+├── config/
+├── dev/
+└── internal/
+```
+
+
 
 ### 1. Copiar variáveis de ambiente
 ```bash
