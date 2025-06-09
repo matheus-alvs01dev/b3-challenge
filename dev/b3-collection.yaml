@@ -1,0 +1,53 @@
+type: collection.insomnia.rest/5.0
+name: backend challange
+meta:
+  id: wrk_310a0c01b5da4e61bf37d7fb1c2e0c7c
+  created: 1749405552980
+  modified: 1749431138666
+  description: ""
+collection:
+  - url: http://localhost:8080/ticker-metrics
+    name: Ticker Metrics
+    meta:
+      id: req_a9386e391f2a466582d66380e2ef0404
+      created: 1749405552999
+      modified: 1749431105567
+      isPrivate: false
+      description: ""
+      sortKey: -1749405552999
+    method: GET
+    parameters:
+      - id: pair_0471cae5090e4eb5b12069a3db7a2259
+        name: ticker
+        value: TF583R
+        description: ""
+        disabled: false
+      - id: pair_c2358cecb2eb4da5adeb05621fa0a91c
+        name: trade_date
+        value: 2025-06-04
+        description: ""
+        disabled: false
+    headers:
+      - name: User-Agent
+        value: insomnia/11.2.0
+    settings:
+      renderRequestBody: true
+      encodeUrl: true
+      followRedirects: global
+      cookies:
+        send: true
+        store: true
+      rebuildPath: true
+cookieJar:
+  name: Default Jar
+  meta:
+    id: jar_2f1667542fce4608266b848670ea1708c5dc3eb8
+    created: 1749405552984
+    modified: 1749405552984
+environments:
+  name: Base Environment
+  meta:
+    id: env_2f1667542fce4608266b848670ea1708c5dc3eb8
+    created: 1749405552983
+    modified: 1749405552983
+    isPrivate: false
