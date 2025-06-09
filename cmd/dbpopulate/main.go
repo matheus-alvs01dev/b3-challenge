@@ -74,45 +74,6 @@ func main() {
 	logger.Info("Application finished.", zap.Duration(" Total processing time", duration))
 }
 
-func processAndBatchTrades(
-	ctx context.Context,
-	tradesIn <-chan entity.Trade,
-	dbOut chan<- []entity.Trade,
-	batchSize int,
-	logger *zap.Logger,
-) {
-	batch := make([]entity.Trade, 0, batchSize)
-	defer close(dbOut)
-
-	for {
-		select {
-		case <-ctx.Done():
-			logger.Info("Context cancelled, flushing final batch and stopping.")
-			if len(batch) > 0 {
-				dbOut <- batch
-			}
-
-			return
-
-		case tr, ok := <-tradesIn:
-			if !ok {
-				logger.Info("Trades channel closed, flushing final batch.")
-				if len(batch) > 0 {
-					dbOut <- batch
-				}
-
-				return
-			}
-			batch = append(batch, tr)
-			if len(batch) >= batchSize {
-				logger.Info("Batch size reached. ", zap.Int("size", len(batch)))
-				dbOut <- batch
-				batch = make([]entity.Trade, 0, batchSize)
-			}
-		}
-	}
-}
-
 func setupLogger() (*zap.Logger, error) {
 	cfg := zap.NewDevelopmentConfig()
 	cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
@@ -222,5 +183,44 @@ func startDBWorkers(
 				}
 			}
 		}(i)
+	}
+}
+
+func processAndBatchTrades(
+	ctx context.Context,
+	tradesIn <-chan entity.Trade,
+	dbOut chan<- []entity.Trade,
+	batchSize int,
+	logger *zap.Logger,
+) {
+	batch := make([]entity.Trade, 0, batchSize)
+	defer close(dbOut)
+
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info("Context cancelled, flushing final batch and stopping.")
+			if len(batch) > 0 {
+				dbOut <- batch
+			}
+
+			return
+
+		case tr, ok := <-tradesIn:
+			if !ok {
+				logger.Info("Trades channel closed, flushing final batch.")
+				if len(batch) > 0 {
+					dbOut <- batch
+				}
+
+				return
+			}
+			batch = append(batch, tr)
+			if len(batch) >= batchSize {
+				logger.Info("Batch size reached. ", zap.Int("size", len(batch)))
+				dbOut <- batch
+				batch = make([]entity.Trade, 0, batchSize)
+			}
+		}
 	}
 }
