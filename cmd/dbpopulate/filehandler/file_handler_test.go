@@ -19,7 +19,7 @@ func readFileTest(t *testing.T, file string) []byte {
 
 func TestFindTXTFiles(t *testing.T) {
 	input := "testdata"
-	files, err := findTXTFiles(input)
+	files, err := FindTXTFiles(input)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(files))
 	assert.Equal(t, "testdata/mock-csv.txt", files[0])
@@ -44,7 +44,7 @@ func TestParseFileToTrades(t *testing.T) {
 	}
 
 	out := make(chan entity.Trade, 2)
-	gotErr := parseFileToTrades(context.Background(), "testdata/mock-csv.txt", out)
+	gotErr := ParseFileToTrades(context.Background(), "testdata/mock-csv.txt", out)
 	assert.NoError(t, gotErr)
 	close(out)
 
