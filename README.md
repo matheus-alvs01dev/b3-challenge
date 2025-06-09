@@ -22,14 +22,14 @@ O projeto consiste em 2 partes principais:
 
 ## 🛠 Tecnologias
 -	Linguagem: Go 1.24
--	Framework HTTP: Echo
+-	Framework HTTP: [Echo](https://echo.labstack.com)
 -	DB: PostgreSQL
--	Persistência: SQLC (sqlc v1.29.0)
--	Migrations: Goose ou Makefile
+-	Persistência: [SQLC](https://sqlc.dev/) (sqlc v1.29.0)
+-	Migrations: [pressly/goose](https://github.com/pressly/goose)
 -	Container: Docker Compose (PostgreSQL)
--	Testes & Mocks: Uber Mockgen (GOMOCK)
+-	Testes & Mocks: [Uber Mockgen](https://github.com/uber-go/mock) (GOMOCK)
 -	Automação: Makefile para tarefas comuns
--   Golanglintci para qualidade de código
+-  	Linter: [Golanglintci](https://golangci-lint.run/) para qualidade de código
 
 ⸻
 
