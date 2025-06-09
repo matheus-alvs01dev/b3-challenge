@@ -4,16 +4,17 @@ import (
 	"b3challenge/internal/adapter/http/request"
 	"b3challenge/internal/adapter/http/response"
 	"encoding/json"
-	"github.com/AlekSi/pointer"
-	"github.com/labstack/echo/v4"
-	"github.com/shopspring/decimal"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/AlekSi/pointer"
+	"github.com/labstack/echo/v4"
+	"github.com/shopspring/decimal"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 func TestNewTradesCtrl(t *testing.T) {

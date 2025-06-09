@@ -3,11 +3,12 @@ package usecase
 import (
 	"b3challenge/internal/domain/entity"
 	"context"
+	"testing"
+	"time"
+
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
-	"testing"
-	"time"
 )
 
 func TestNewTradeUC(t *testing.T) {

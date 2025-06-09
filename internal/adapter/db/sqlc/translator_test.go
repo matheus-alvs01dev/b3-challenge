@@ -2,12 +2,13 @@ package sqlc
 
 import (
 	"b3challenge/internal/domain/entity"
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/shopspring/decimal"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/shopspring/decimal"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewToCreateTradesParams_Single(t *testing.T) {

@@ -4,10 +4,11 @@ import (
 	"b3challenge/internal/adapter/http/request"
 	"b3challenge/internal/adapter/http/response"
 	"context"
-	"github.com/labstack/echo/v4"
-	"github.com/shopspring/decimal"
 	"net/http"
 	"time"
+
+	"github.com/labstack/echo/v4"
+	"github.com/shopspring/decimal"
 )
 
 //go:generate mockgen -source=trades_ctrl.go -destination=trades_ctrl_mock.go -package=ctrl TradesUC

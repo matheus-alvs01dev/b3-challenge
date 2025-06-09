@@ -4,6 +4,7 @@ import (
 	"b3challenge/internal/adapter/db"
 	"b3challenge/internal/api/ctrl"
 	"b3challenge/internal/domain/usecase"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

@@ -4,9 +4,10 @@ import (
 	"b3challenge/internal/adapter/db/sqlc"
 	"b3challenge/internal/domain/entity"
 	"context"
+	"time"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
-	"time"
 )
 
 type TradeRepository struct {

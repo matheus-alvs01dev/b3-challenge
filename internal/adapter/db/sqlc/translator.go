@@ -2,28 +2,32 @@ package sqlc
 
 import (
 	"b3challenge/internal/domain/entity"
+	"time"
+
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/shopspring/decimal"
-	"time"
 )
 
 func NewToCreateTradesParams(trades []entity.Trade) []CreateTradesParams {
 	var params []CreateTradesParams
-	for _, trade := range trades {
 
+	for _, trade := range trades {
 		params = append(params, CreateTradesParams{
 			Hour: trade.Hour,
 			Date: pgtype.Date{
-				Time:  trade.Date,
-				Valid: true,
+				Time:             trade.Date,
+				Valid:            true,
+				InfinityModifier: 0,
 			},
 			Ticker: trade.Ticker,
 			Price: pgtype.Numeric{
-				Int:   trade.Price.Coefficient(),
-				Exp:   trade.Price.Exponent(),
-				Valid: true,
+				Int:              trade.Price.Coefficient(),
+				Exp:              trade.Price.Exponent(),
+				Valid:            true,
+				InfinityModifier: 0,
+				NaN:              false,
 			},
-			Quantity: int32(trade.Quantity),
+			Quantity: trade.Quantity,
 		})
 	}
 
@@ -32,14 +36,19 @@ func NewToCreateTradesParams(trades []entity.Trade) []CreateTradesParams {
 
 func NewListTradeInfoByTickerAndDateParams(ticker string, date *time.Time) ListTradeInfoByTickerAndDateParams {
 	params := ListTradeInfoByTickerAndDateParams{
-		Ticker:    ticker,
-		TradeDate: pgtype.Date{Valid: false},
+		Ticker: ticker,
+		TradeDate: pgtype.Date{
+			Time:             time.Time{},
+			InfinityModifier: 0,
+			Valid:            false,
+		},
 	}
 
 	if date != nil {
 		params.TradeDate = pgtype.Date{
-			Time:  *date,
-			Valid: true,
+			Time:             *date,
+			Valid:            true,
+			InfinityModifier: 0,
 		}
 	}
 

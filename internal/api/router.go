@@ -3,10 +3,11 @@ package api
 import (
 	"b3challenge/internal/api/ctrl"
 	"fmt"
-	"github.com/labstack/echo/v4"
-	echomiddleware "github.com/labstack/echo/v4/middleware"
 	"net/http"
 	"time"
+
+	"github.com/labstack/echo/v4"
+	echomiddleware "github.com/labstack/echo/v4/middleware"
 )
 
 type Server struct {
@@ -16,7 +17,7 @@ type Server struct {
 func NewServer() *Server {
 	router := echo.New()
 	router.HideBanner = true
-	router.Use(echomiddleware.LoggerWithConfig(echomiddleware.LoggerConfig{}))
+	router.Use(echomiddleware.LoggerWithConfig(echomiddleware.LoggerConfig{})) //nolint:exhaustruct
 
 	return &Server{
 		router: router,
@@ -24,11 +25,13 @@ func NewServer() *Server {
 }
 
 func (s *Server) Start(port uint16) {
-	srv := &http.Server{
+	const timeout = 15 * time.Second
+
+	srv := &http.Server{ //nolint:exhaustruct
 		Addr:         fmt.Sprintf("0.0.0.0:%d", port),
 		Handler:      s.router,
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+		WriteTimeout: timeout,
+		ReadTimeout:  timeout,
 	}
 
 	if err := s.router.Start(srv.Addr); err != nil {

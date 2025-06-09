@@ -3,6 +3,7 @@ package db
 import (
 	"b3challenge/internal/adapter/db/migrations"
 	"context"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/lib/pq"

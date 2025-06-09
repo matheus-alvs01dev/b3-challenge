@@ -3,9 +3,10 @@ package usecase
 import (
 	"b3challenge/internal/domain/entity"
 	"context"
+	"time"
+
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
-	"time"
 )
 
 //go:generate mockgen -source=trades_uc.go -destination=trades_uc_mock.go -package=usecase TradesRepository
@@ -50,14 +51,14 @@ func (tr *TradesUC) ComputeTickerMetrics(
 }
 
 func calcMaxRangeValue(trades []entity.TradeInfo) decimal.Decimal {
-	var max decimal.Decimal
+	var maxRangeVal decimal.Decimal
 	for _, trade := range trades {
-		if trade.Price.GreaterThan(max) {
-			max = trade.Price
+		if trade.Price.GreaterThan(maxRangeVal) {
+			maxRangeVal = trade.Price
 		}
 	}
 
-	return max
+	return maxRangeVal
 }
 
 func calcMaxDailyValue(trades []entity.TradeInfo) int {
@@ -67,12 +68,12 @@ func calcMaxDailyValue(trades []entity.TradeInfo) int {
 		dailyTotal[date] += trade.Quantity
 	}
 
-	var max int
+	var maxDailyVal int
 	for _, total := range dailyTotal {
-		if total > max {
-			max = total
+		if total > maxDailyVal {
+			maxDailyVal = total
 		}
 	}
 
-	return max
+	return maxDailyVal
 }

@@ -1,9 +1,10 @@
 package config
 
 import (
+	"runtime"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
-	"runtime"
 )
 
 func LoadConfig() error {
@@ -23,7 +24,7 @@ func LoadConfig() error {
 	return nil
 }
 
-var cfg *Config
+var cfg *Config //nolint:gochecknoglobals
 
 type Config struct {
 	APIPort            uint16 `mapstructure:"API_PORT"`
@@ -50,8 +51,10 @@ func GetParserWorkersCount() int {
 }
 
 func GetBatchSize() int {
+	const defaultBatchSize = 50000
+
 	if cfg.BatchSize == 0 {
-		return 50000
+		return defaultBatchSize
 	}
 
 	return cfg.BatchSize
