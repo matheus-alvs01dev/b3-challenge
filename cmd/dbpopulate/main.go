@@ -8,27 +8,27 @@ import (
 	"b3challenge/internal/domain/entity"
 	"b3challenge/internal/domain/usecase"
 	"context"
-	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func main() {
-	diContainer, ctx, cancel := setupComponents()
+	logger, err := setupLogger()
+	if err != nil {
+		panic("failed to create logger: " + err.Error())
+	}
+	defer logger.Sync() //nolint:errcheck
+
+	diContainer, ctx, cancel := setupComponents(logger)
 	defer cancel()
 	defer diContainer.DB().Close()
-
-	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		AddSource:   false,
-		Level:       slog.LevelInfo,
-		ReplaceAttr: nil,
-	})
-
-	logger := slog.New(handler)
-	slog.SetDefault(logger)
 
 	parserWorkers := config.GetParserWorkersCount()
 	batchSize := config.GetBatchSize()
@@ -41,16 +41,16 @@ func main() {
 	start := time.Now()
 	files, err := filehandler.FindTXTFiles("b3Data")
 	if err != nil {
-		slog.Error("Error finding TXT files: ", slog.Any("err", err))
+		logger.Error("Error finding TXT files: ", zap.Error(err))
 	}
 
-	slog.Info("Found TXT files: ", slog.Any("files", files))
+	logger.Info("Found TXT files: ", zap.Strings("files", files))
 
 	var dbWg sync.WaitGroup
-	startDBWorkers(ctx, dbCh, diContainer.GetTradesUC(), dbWorkers, &dbWg)
+	startDBWorkers(ctx, dbCh, diContainer.GetTradesUC(), dbWorkers, &dbWg, logger)
 
 	var parserWg sync.WaitGroup
-	startParserWorkers(ctx, parserWorkers, jobCh, tradesCh, &parserWg)
+	startParserWorkers(ctx, parserWorkers, jobCh, tradesCh, &parserWg, logger)
 
 	go func() {
 		for _, f := range files {
@@ -58,20 +58,20 @@ func main() {
 		}
 		close(jobCh)
 
-		slog.Info("All jobs dispatched. Waiting for parsers to finish...")
+		logger.Info("All jobs dispatched. Waiting for parsers to finish...")
 		parserWg.Wait()
 
-		slog.Info("All parsing workers finished. Closing trades channel.")
+		logger.Info("All parsing workers finished. Closing trades channel.")
 		close(tradesCh)
 	}()
 
-	processAndBatchTrades(ctx, tradesCh, dbCh, batchSize)
+	processAndBatchTrades(ctx, tradesCh, dbCh, batchSize, logger)
 
-	slog.Info("Main process finished, waiting for DB workers to commit last batches...")
+	logger.Info("Main process finished, waiting for DB workers to commit last batches...")
 	dbWg.Wait()
 
 	duration := time.Since(start)
-	slog.Info("Application finished.", slog.Duration(" Total processing time", duration))
+	logger.Info("Application finished.", zap.Duration(" Total processing time", duration))
 }
 
 func processAndBatchTrades(
@@ -79,6 +79,7 @@ func processAndBatchTrades(
 	tradesIn <-chan entity.Trade,
 	dbOut chan<- []entity.Trade,
 	batchSize int,
+	logger *zap.Logger,
 ) {
 	batch := make([]entity.Trade, 0, batchSize)
 	defer close(dbOut)
@@ -86,7 +87,7 @@ func processAndBatchTrades(
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("Context cancelled, flushing final batch and stopping.")
+			logger.Info("Context cancelled, flushing final batch and stopping.")
 			if len(batch) > 0 {
 				dbOut <- batch
 			}
@@ -95,7 +96,7 @@ func processAndBatchTrades(
 
 		case tr, ok := <-tradesIn:
 			if !ok {
-				slog.Info("Trades channel closed, flushing final batch.")
+				logger.Info("Trades channel closed, flushing final batch.")
 				if len(batch) > 0 {
 					dbOut <- batch
 				}
@@ -104,12 +105,49 @@ func processAndBatchTrades(
 			}
 			batch = append(batch, tr)
 			if len(batch) >= batchSize {
-				slog.Info("Batch size reached. ", slog.Int("size", len(batch)))
+				logger.Info("Batch size reached. ", zap.Int("size", len(batch)))
 				dbOut <- batch
 				batch = make([]entity.Trade, 0, batchSize)
 			}
 		}
 	}
+}
+
+func setupLogger() (*zap.Logger, error) {
+	cfg := zap.NewDevelopmentConfig()
+	cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	logger, err := cfg.Build()
+	if err != nil {
+		return nil, errors.Wrap(err, "zap")
+	}
+
+	return logger, nil
+}
+
+func setupComponents(logger *zap.Logger) (*di.Container, context.Context, context.CancelFunc) {
+	err := config.LoadConfig()
+	if err != nil {
+		logger.Error("Error loading env configs:", zap.Error(err))
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	dbClient, err := db.NewClient(config.GetDatabaseDSN())
+	if err != nil {
+		logger.Error("Error initializing database client", zap.Error(err))
+	}
+
+	diContainer := di.NewContainer(dbClient.DB())
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		logger.Info("Received shutdown signal, cancelling context...")
+		cancel()
+	}()
+
+	return diContainer, ctx, cancel
 }
 
 func startParserWorkers(
@@ -118,6 +156,7 @@ func startParserWorkers(
 	jobCh <-chan string,
 	tradesCh chan<- entity.Trade,
 	wg *sync.WaitGroup,
+	logger *zap.Logger,
 ) {
 	for range numWorkers {
 		wg.Add(1)
@@ -126,13 +165,13 @@ func startParserWorkers(
 			for file := range jobCh {
 				select {
 				case <-ctx.Done():
-					slog.Info("Parser worker shutting down due to context cancellation.")
+					logger.Info("Parser worker shutting down due to context cancellation.")
 
 					return
 
 				default:
-					if err := filehandler.ParseFileToTrades(ctx, file, tradesCh); err != nil {
-						slog.Error("Error parsing file %s: %v", file, err)
+					if err := filehandler.ParseFileToTrades(ctx, file, tradesCh, logger); err != nil {
+						logger.Error("Error parsing file:", zap.Any("file", file), zap.Error(err))
 
 						continue
 					}
@@ -142,37 +181,13 @@ func startParserWorkers(
 	}
 }
 
-func setupComponents() (*di.Container, context.Context, context.CancelFunc) {
-	err := config.LoadConfig()
-	if err != nil {
-		slog.Error("Error loading env configs: %v", slog.Any("err", err))
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	dbClient, err := db.NewClient(config.GetDatabaseDSN())
-	if err != nil {
-		slog.Error("Error initializing database client", slog.Any("err", err))
-	}
-
-	diContainer := di.NewContainer(dbClient.DB())
-
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-sigCh
-		slog.Info("Received shutdown signal, cancelling context...")
-		cancel()
-	}()
-
-	return diContainer, ctx, cancel
-}
-
 func startDBWorkers(
 	ctx context.Context,
 	dbCh chan []entity.Trade,
 	uc *usecase.TradesUC,
 	workerCount int,
 	wg *sync.WaitGroup,
+	logger *zap.Logger,
 ) {
 	for i := range workerCount {
 		wg.Add(1)
@@ -181,9 +196,9 @@ func startDBWorkers(
 			for batch := range dbCh {
 				select {
 				case <-ctx.Done():
-					slog.Info(
+					logger.Info(
 						"DB worker shutting down due to context cancellation.",
-						slog.Any("worker_id", id),
+						zap.Any("worker_id", id),
 					)
 
 					return
@@ -195,14 +210,14 @@ func startDBWorkers(
 
 					count, err := uc.CreateTrades(ctx, batch)
 					if err != nil {
-						slog.Error("DB worker error", slog.Int("worker_id", id), slog.Any("err", err))
+						logger.Error("DB worker error", zap.Int("worker_id", id), zap.Error(err))
 
 						continue
 					}
-					slog.Info(
+					logger.Info(
 						"DB worker wrote batch",
-						slog.Int("worker_id", id),
-						slog.Int("trades_written", count),
+						zap.Int("worker_id", id),
+						zap.Int("trades_written", count),
 					)
 				}
 			}

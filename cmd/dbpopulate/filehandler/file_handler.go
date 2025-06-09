@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/csv"
 	"io"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 )
 
 const (
@@ -42,7 +42,7 @@ func FindTXTFiles(pathDir string) ([]string, error) {
 	return list, nil
 }
 
-func ParseFileToTrades(ctx context.Context, filePath string, out chan<- entity.Trade) error {
+func ParseFileToTrades(ctx context.Context, filePath string, out chan<- entity.Trade, logger *zap.Logger) error {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return errors.Wrap(err, "cannot open file")
@@ -59,7 +59,7 @@ func ParseFileToTrades(ctx context.Context, filePath string, out chan<- entity.T
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("Context cancelled, stopping file parsing")
+			logger.Info("Context cancelled, stopping file parsing")
 
 			return errors.Wrap(ctx.Err(), "context cancelled")
 
@@ -70,13 +70,13 @@ func ParseFileToTrades(ctx context.Context, filePath string, out chan<- entity.T
 			}
 
 			if err != nil {
-				slog.Error("CSV read error: ", slog.Any("error", err))
+				logger.Error("CSV read error: ", zap.Error(err))
 
 				continue
 			}
 			trade, err := parseTradeToEntity(rec)
 			if err != nil {
-				slog.Error("parsing trade: ", slog.Any("error", err))
+				logger.Error("parsing trade: ", zap.Error(err))
 
 				continue
 			}

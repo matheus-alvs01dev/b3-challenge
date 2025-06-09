@@ -38,6 +38,7 @@ linters:
         - uc
       ignore-decls:
         - c echo.Context
+        - wg *sync.WaitGroup
   exclusions:
     generated: lax
     presets:

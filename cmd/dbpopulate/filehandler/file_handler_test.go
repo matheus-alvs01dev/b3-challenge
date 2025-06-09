@@ -5,6 +5,7 @@ import (
 	"context"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 	"testing"
 	"time"
 )
@@ -36,7 +37,7 @@ func TestParseFileToTrades(t *testing.T) {
 	}
 
 	out := make(chan entity.Trade, 2)
-	gotErr := ParseFileToTrades(context.Background(), "testdata/mock-csv.txt", out)
+	gotErr := ParseFileToTrades(context.Background(), "testdata/mock-csv.txt", out, zap.L())
 	assert.NoError(t, gotErr)
 	close(out)
 
