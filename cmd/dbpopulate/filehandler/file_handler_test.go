@@ -1,4 +1,4 @@
-package main
+package filehandler
 
 import (
 	"b3challenge/internal/domain/entity"

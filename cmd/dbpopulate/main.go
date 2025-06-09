@@ -1,6 +1,7 @@
 package main
 
 import (
+	"b3challenge/cmd/dbpopulate/filehandler"
 	"b3challenge/config"
 	"b3challenge/internal/adapter/db"
 	"b3challenge/internal/di"
@@ -38,7 +39,7 @@ func main() {
 	dbCh := make(chan []entity.Trade, dbWorkers)
 
 	start := time.Now()
-	files, err := findTXTFiles("b3Data")
+	files, err := filehandler.FindTXTFiles("b3Data")
 	if err != nil {
 		slog.Error("Error finding TXT files: ", slog.Any("err", err))
 	}
@@ -130,7 +131,7 @@ func startParserWorkers(
 					return
 
 				default:
-					if err := parseFileToTrades(ctx, file, tradesCh); err != nil {
+					if err := filehandler.ParseFileToTrades(ctx, file, tradesCh); err != nil {
 						slog.Error("Error parsing file %s: %v", file, err)
 
 						continue

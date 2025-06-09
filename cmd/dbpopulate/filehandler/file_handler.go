@@ -1,4 +1,4 @@
-package main
+package filehandler
 
 import (
 	"b3challenge/internal/domain/entity"
@@ -26,7 +26,7 @@ const (
 	dateColumnIndex     = 8
 )
 
-func findTXTFiles(pathDir string) ([]string, error) {
+func FindTXTFiles(pathDir string) ([]string, error) {
 	entries, err := os.ReadDir(pathDir)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error reading directory %s", pathDir)
@@ -42,40 +42,7 @@ func findTXTFiles(pathDir string) ([]string, error) {
 	return list, nil
 }
 
-func parseTradeToEntity(rows []string) (*entity.Trade, error) {
-	if len(rows) < minRecordLength {
-		return nil, errors.New("invalid record length")
-	}
-
-	ticker := rows[tickerColumnIndex]
-	rawPrice := strings.ReplaceAll(rows[priceColumnIndex], ",", ".")
-	rawQty := rows[quantityColumnIndex]
-	rawHour := rows[hourColumnIndex]
-	rawDate := rows[dateColumnIndex]
-
-	price, err := decimal.NewFromString(rawPrice)
-	if err != nil {
-		return nil, errors.Wrap(err, "parsing price")
-	}
-	qty, err := strconv.ParseInt(rawQty, 10, 32)
-	if err != nil {
-		return nil, errors.Wrap(err, "parsing quantity")
-	}
-
-	hourPart := rawHour
-	if len(rawHour) >= minHourLength {
-		hourPart = rawHour[:minHourLength]
-	}
-
-	date, err := time.Parse(time.DateOnly, rawDate)
-	if err != nil {
-		return nil, errors.Wrap(err, "parsing date")
-	}
-
-	return entity.NewTrade(ticker, hourPart, date, price, int32(qty)), nil
-}
-
-func parseFileToTrades(ctx context.Context, filePath string, out chan<- entity.Trade) error {
+func ParseFileToTrades(ctx context.Context, filePath string, out chan<- entity.Trade) error {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return errors.Wrap(err, "cannot open file")
@@ -116,4 +83,37 @@ func parseFileToTrades(ctx context.Context, filePath string, out chan<- entity.T
 			out <- *trade
 		}
 	}
+}
+
+func parseTradeToEntity(rows []string) (*entity.Trade, error) {
+	if len(rows) < minRecordLength {
+		return nil, errors.New("invalid record length")
+	}
+
+	ticker := rows[tickerColumnIndex]
+	rawPrice := strings.ReplaceAll(rows[priceColumnIndex], ",", ".")
+	rawQty := rows[quantityColumnIndex]
+	rawHour := rows[hourColumnIndex]
+	rawDate := rows[dateColumnIndex]
+
+	price, err := decimal.NewFromString(rawPrice)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing price")
+	}
+	qty, err := strconv.ParseInt(rawQty, 10, 32)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing quantity")
+	}
+
+	hourPart := rawHour
+	if len(rawHour) >= minHourLength {
+		hourPart = rawHour[:minHourLength]
+	}
+
+	date, err := time.Parse(time.DateOnly, rawDate)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing date")
+	}
+
+	return entity.NewTrade(ticker, hourPart, date, price, int32(qty)), nil
 }
